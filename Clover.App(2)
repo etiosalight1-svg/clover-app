@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>Clover</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+/* ==============================================
+   REPLACE THIS WITH YOUR FIREBASE CONFIG
+   Firebase Console > Project Settings > Your Apps
+   ============================================== */
+const firebaseConfig = {
+  apiKey:            "AIzaSyAcNAXaUIWtdb7bbxuS8UdN91zDVuJ_US8",
+  authDomain:        "clover-f9968.firebaseapp.com",
+  projectId:         "clover-f9968",
+  storageBucket:     "clover-f9968.firebasestorage.app",
+  messagingSenderId: "1076957833197",
+  appId:             "1:1076957833197:web:be8f7182dd277d1cb5e9e4"
+};
+
+/* Detect if Firebase SDK loaded AND config is set */
+const FIREBASE_AVAILABLE = typeof firebase !== 'undefined';
+const FIREBASE_READY = FIREBASE_AVAILABLE && firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+let auth = null;
+let db = null;
+
+if(FIREBASE_READY){
+  try {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db   = firebase.firestore();
+  } catch(e) {
+    console.warn("Firebase init failed:", e.message);
+  }
+}
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+:root{
+  --bg:#070709;--bg2:#0e0e12;--bg3:#15151b;--card:#1a1a22;--card2:#202028;
+  --text:#f0f0f8;--muted:#52525e;--subtle:#2a2a35;
+  --green:#00e87a;--cyan:#00c8f0;--purple:#8b5cf6;
+  --pink:#f059a8;--gold:#f5a623;--red:#f04060;--yellow:#fde047;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.1);
+  --r:20px;--r2:14px;--r3:10px;
+}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:"Space Grotesk",sans-serif;overflow:hidden;user-select:none;}
+.screen{position:fixed;inset:0;display:none !important;flex-direction:column;background:var(--bg);overflow:hidden;z-index:100;}.screen.active{display:flex !important;z-index:200;}
+@keyframes pgIn{from{transform:translateX(18px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+@keyframes slideUp{from{transform:translateY(18px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.fu{animation:slideUp .4s cubic-bezier(.22,1,.36,1) both;}
+.d1{animation-delay:.04s;}.d2{animation-delay:.08s;}.d3{animation-delay:.13s;}.d4{animation-delay:.18s;}.d5{animation-delay:.23s;}
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:16px;}
+#loader svg{width:56px;height:56px;filter:drop-shadow(0 0 16px var(--green));animation:float 1.8s ease-in-out infinite;}
+#loader p{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:var(--muted);}
+.auth-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px 28px;overflow-y:auto;}
+.auth-logo{width:60px;height:60px;margin-bottom:18px;filter:drop-shadow(0 0 18px var(--green));animation:float 3s ease-in-out infinite;}
+.auth-brand{font-family:"Syne",sans-serif;font-size:30px;font-weight:800;letter-spacing:.14em;background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:5px;}
+.auth-tag{font-size:12px;letter-spacing:.18em;color:var(--muted);margin-bottom:36px;}
+.auth-fw{width:100%;}
+.auth-field-wrap{width:100%;position:relative;margin-bottom:11px;}
+.auth-field-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+.auth-field{width:100%;padding:14px 16px 14px 42px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-family:"Space Grotesk",sans-serif;font-size:15px;outline:none;transition:border-color .2s;}
+.auth-field:focus{border-color:rgba(0,232,122,.5);box-shadow:0 0 0 3px rgba(0,232,122,.07);}
+.auth-field::placeholder{color:var(--muted);}
+.auth-cta{width:100%;padding:15px;margin-top:4px;border-radius:var(--r2);border:none;font-family:"Syne",sans-serif;font-size:15px;font-weight:700;letter-spacing:.08em;cursor:pointer;background:linear-gradient(135deg,var(--green),var(--cyan));color:#070709;transition:transform .15s;}
+.auth-cta:active{transform:scale(.98);}
+.auth-cta:disabled{opacity:.5;pointer-events:none;}
+.auth-err{color:var(--red);font-size:12px;text-align:center;margin:6px 0;min-height:16px;}
+.auth-switch{margin-top:20px;font-size:13px;color:var(--muted);text-align:center;}
+.auth-switch span{color:var(--green);font-weight:600;cursor:pointer;}
+.auth-links{display:flex;gap:16px;margin-top:18px;justify-content:center;}
+.auth-link{font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+#onboard{background:var(--bg);overflow-y:auto;position:fixed;inset:0;z-index:9999;}
+.ob-inner{display:flex;flex-direction:column;align-items:center;padding:60px 28px 50px;min-height:100%;width:100%;}
+.ob-content{display:none;flex-direction:column;align-items:center;width:100%;}
+.ob-content.active{display:flex;}
+.ob-logo{width:68px;height:68px;margin-bottom:18px;filter:drop-shadow(0 0 18px var(--green));animation:float 3s ease-in-out infinite;}
+.ob-brand{font-family:"Syne",sans-serif;font-size:30px;font-weight:800;letter-spacing:.14em;background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:36px;}
+.ob-dots{display:flex;gap:6px;margin-bottom:32px;}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:var(--subtle);transition:all .3s;}
+.ob-dot.on{width:20px;border-radius:4px;background:var(--green);}
+.ob-step-lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;align-self:flex-start;}
+.ob-h{font-family:"Syne",sans-serif;font-size:22px;font-weight:800;margin-bottom:8px;align-self:flex-start;}
+.ob-p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:32px;align-self:flex-start;}
+.ob-field{width:100%;padding:14px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-family:"Space Grotesk",sans-serif;font-size:15px;outline:none;margin-bottom:12px;transition:border-color .2s;}
+.ob-field:focus{border-color:rgba(0,232,122,.4);}
+.ob-field::placeholder{color:var(--muted);}
+.ob-pill-list{width:100%;display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+.ob-pill{display:flex;align-items:center;gap:13px;padding:13px 15px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+.ob-pill.sel{background:rgba(0,232,122,.06);border-color:rgba(0,232,122,.35);}
+.ob-pill-ic{width:36px;height:36px;border-radius:10px;background:var(--subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;}
+.ob-pill-ic svg{width:19px;height:19px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s;}
+.ob-pill.sel .ob-pill-ic{background:rgba(0,232,122,.12);}
+.ob-pill.sel .ob-pill-ic svg{stroke:var(--green);}
+.ob-pill-name{flex:1;font-size:14px;font-weight:600;}
+.ob-pill-check{opacity:0;transition:opacity .2s;}
+.ob-pill-check svg{width:16px;height:16px;stroke:var(--green);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+.ob-pill.sel .ob-pill-check{opacity:1;}
+.ob-cta{width:100%;padding:15px;border-radius:var(--r2);border:none;font-family:"Syne",sans-serif;font-size:15px;font-weight:700;letter-spacing:.08em;cursor:pointer;background:linear-gradient(135deg,var(--green),var(--cyan));color:#070709;transition:transform .15s;}
+.ob-cta:active{transform:scale(.98);}
+.scrollable{overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.scrollable::-webkit-scrollbar{display:none;}
+.hdr{padding:52px 20px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.hdr-title{font-family:"Syne",sans-serif;font-size:20px;font-weight:800;letter-spacing:.04em;}
+.hdr-back{width:38px;height:38px;border-radius:var(--r3);background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent;}
+.hdr-back:active{background:var(--card2);}
+.hdr-back svg{width:20px;height:20px;stroke:var(--text);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.hdr-actions{display:flex;gap:8px;}
+.hdr-btn{width:38px;height:38px;border-radius:var(--r3);background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:background .2s;-webkit-tap-highlight-color:transparent;}
+.hdr-btn:active{background:var(--card2);}
+.hdr-btn svg{width:19px;height:19px;stroke:var(--text);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.pip{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg);animation:pulse 2s ease-in-out infinite;}
+.divider{height:1px;background:var(--border);flex-shrink:0;}
+.badge-live{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:rgba(240,64,96,.15);color:var(--red);border:1px solid rgba(240,64,96,.3);}
+.badge-live::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--red);animation:pulse 1.2s infinite;flex-shrink:0;}
+#home{padding-bottom:76px;}
+.home-top{padding:52px 20px 4px;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+.home-logo-row{display:flex;align-items:center;gap:10px;}
+.home-logo-svg{width:30px;height:30px;filter:drop-shadow(0 0 8px var(--green));}
+.home-brand{font-family:"Syne",sans-serif;font-size:21px;font-weight:800;letter-spacing:.14em;background:linear-gradient(90deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.home-greeting{font-size:12px;color:var(--muted);margin-top:4px;padding-left:40px;}
+.home-greeting span{color:var(--green);font-weight:600;}
+.home-search{margin:14px 16px 12px;display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:11px 15px;}
+.home-search input{background:none;border:none;outline:none;color:var(--text);font-family:"Space Grotesk",sans-serif;font-size:14px;width:100%;}
+.home-search input::placeholder{color:var(--muted);}
+.ticker-wrap{margin:0 16px 14px;padding:10px 14px;background:rgba(240,64,96,.06);border:1px solid rgba(240,64,96,.18);border-radius:var(--r2);display:flex;align-items:center;gap:10px;overflow:hidden;flex-shrink:0;}
+.ticker-label{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.16em;color:var(--red);flex-shrink:0;display:flex;align-items:center;gap:5px;}
+.ticker-label::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1s infinite;flex-shrink:0;}
+.ticker-text{font-size:12px;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ticker-text strong{color:var(--red);}
+.sec-label{padding:0 18px 11px;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;}
+.sec-label em{color:var(--green);font-style:normal;font-family:"Space Grotesk",sans-serif;font-size:11px;}
+.p-scroll{flex:1;overflow-y:auto;padding:0 12px 8px;scrollbar-width:none;}
+.p-scroll::-webkit-scrollbar{display:none;}
+.p-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pc{position:relative;border-radius:var(--r);overflow:hidden;cursor:pointer;aspect-ratio:1;background:var(--card);-webkit-tap-highlight-color:transparent;transition:transform .2s cubic-bezier(.22,1,.36,1);}
+.pc:active{transform:scale(.95);}
+.pc-img{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.42) saturate(.8);}
+.pc-ov{position:absolute;inset:0;}
+.pc-top{position:absolute;top:11px;left:11px;right:11px;display:flex;justify-content:space-between;align-items:flex-start;}
+.pc-members{background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:3px 8px;font-size:8px;color:rgba(255,255,255,.5);}
+.pc-body{position:absolute;bottom:0;left:0;right:0;padding:12px 14px 14px;}
+.pc-title{font-family:"Syne",sans-serif;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;margin-bottom:3px;}
+.pc-sub{font-size:9px;letter-spacing:.08em;text-transform:uppercase;opacity:.65;}
+.pc-line{position:absolute;bottom:0;left:0;right:0;height:2.5px;}
+.p-tech{--c:var(--purple);}.p-hlth{--c:var(--gold);}.p-cre{--c:var(--pink);}.p-biz{--c:var(--green);}.p-soc{--c:var(--cyan);}.p-spt{--c:var(--red);}.p-sci{--c:var(--cyan);}.p-pln{--c:var(--yellow);}
+.pc-line{background:var(--c);}.pc-sub{color:var(--c);}
+#detail{padding-bottom:76px;}
+.det-hdr{padding:52px 20px 14px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.det-title-wrap{flex:1;text-align:center;}
+.det-bread{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.16em;color:var(--muted);margin-bottom:2px;}
+.det-title{font-family:"Syne",sans-serif;font-size:18px;font-weight:800;}
+.det-scroll{flex:1;padding:14px 12px;overflow-y:auto;scrollbar-width:none;}
+.det-scroll::-webkit-scrollbar{display:none;}
+.sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sc{position:relative;border-radius:var(--r);overflow:hidden;cursor:pointer;aspect-ratio:3/4;background:var(--card);-webkit-tap-highlight-color:transparent;transition:transform .2s cubic-bezier(.22,1,.36,1);}
+.sc:active{transform:scale(.95);}
+.sc-img{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.42) saturate(.8);}
+.sc-ov{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.9) 100%);}
+.sc-line{position:absolute;bottom:0;left:0;right:0;height:2.5px;}
+.sc-top{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;}
+.sc-cnt{background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:3px 8px;font-size:8px;color:rgba(255,255,255,.5);}
+.sc-body{position:absolute;bottom:0;left:0;right:0;padding:11px 13px 13px;}
+.sc-label{font-family:"Syne",sans-serif;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff;display:block;margin-bottom:2px;}
+.sc-count{font-size:9px;letter-spacing:.06em;color:rgba(255,255,255,.4);}
+#feed{padding-bottom:0;}
+.feed-hdr{padding:52px 20px 12px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.feed-tb{flex:1;text-align:center;}
+.feed-bread{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;color:var(--muted);}
+.feed-title{font-family:"Syne",sans-serif;font-size:17px;font-weight:800;}
+.feed-banner{margin:10px 14px 0;border-radius:var(--r);overflow:hidden;height:100px;position:relative;flex-shrink:0;}
+.fb-img{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.45);}
+.fb-ov{position:absolute;inset:0;}
+.fb-content{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-between;padding:12px 14px;}
+.fb-left h3{font-family:"Syne",sans-serif;font-size:13px;font-weight:800;color:#fff;margin-bottom:2px;}
+.fb-left p{font-size:9px;color:rgba(255,255,255,.45);letter-spacing:.06em;}
+.fb-mc{font-family:"JetBrains Mono",monospace;font-size:11px;color:rgba(255,255,255,.6);}
+.fb-online{font-size:9px;color:var(--green);}
+.feed-tabs{display:flex;margin:10px 14px 0;background:var(--bg3);border-radius:var(--r2);padding:3px;flex-shrink:0;}
+.ftab{flex:1;padding:8px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:var(--r3);cursor:pointer;color:var(--muted);transition:all .2s;}
+.ftab.on{background:var(--card2);color:var(--text);}
+.compose-bar{margin:10px 14px 0;display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.c-av{width:32px;height:32px;border-radius:50%;background:var(--card2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.c-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.c-av svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:2;}
+.c-field{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:9px 14px;color:var(--muted);font-family:"Space Grotesk",sans-serif;font-size:13px;cursor:pointer;}
+.c-post{padding:9px 16px;border-radius:20px;border:none;font-family:"Syne",sans-serif;font-size:11px;font-weight:700;cursor:pointer;color:#070709;flex-shrink:0;}
+.feed-scroll{flex:1;overflow-y:auto;padding:10px 14px 80px;scrollbar-width:none;}
+.feed-scroll::-webkit-scrollbar{display:none;}
+.post{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;animation:slideUp .35s cubic-bezier(.22,1,.36,1);}
+.post-hdr{display:flex;align-items:center;gap:10px;padding:13px 13px 9px;}
+.post-av{width:36px;height:36px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;border:2px solid var(--border);overflow:hidden;}
+.post-av.bot{border-color:var(--cyan);}
+.post-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.post-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px;}
+.post-vbadge{padding:1px 5px;border-radius:4px;font-size:8px;font-weight:700;font-family:"JetBrains Mono",monospace;}
+.post-time{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);margin-top:2px;}
+.post-menu{color:var(--muted);cursor:pointer;padding:4px;margin-left:auto;letter-spacing:2px;}
+.post-body{padding:0 13px 10px;font-size:13.5px;line-height:1.68;color:rgba(255,255,255,.82);}
+.post-footer{display:flex;border-top:1px solid var(--border);}
+.pa{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 4px;cursor:pointer;font-size:11.5px;font-weight:500;color:var(--muted);transition:all .18s;-webkit-tap-highlight-color:transparent;}
+.pa:active{background:rgba(255,255,255,.03);}
+.pa.liked{color:var(--pink);}
+.pa-icon svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.pa.liked .pa-icon svg{fill:var(--pink);stroke:var(--pink);}
+.reply-wrap{display:none;padding:0 13px 12px;gap:9px;align-items:flex-end;}
+.reply-wrap.show{display:flex;}
+.r-in{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:9px 12px;color:var(--text);font-family:"Space Grotesk",sans-serif;font-size:13px;outline:none;resize:none;}
+.r-btn{padding:9px 14px;border-radius:var(--r3);border:none;cursor:pointer;font-family:"Syne",sans-serif;font-size:11px;font-weight:700;color:#070709;flex-shrink:0;}
+.no-posts{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px;line-height:2;}
+#pulse-screen{padding-bottom:76px;}
+.pulse-hdr{padding:52px 20px 16px;display:flex;align-items:flex-end;justify-content:space-between;}
+.pulse-h{font-family:"Syne",sans-serif;font-size:26px;font-weight:800;background:linear-gradient(90deg,var(--red),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px;}
+.pulse-h svg{width:24px;height:24px;flex-shrink:0;}
+.pulse-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.pulse-lc{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px;}
+.pulse-lc::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.2s infinite;flex-shrink:0;}
+.pulse-filters{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.pulse-filters::-webkit-scrollbar{display:none;}
+.pf{padding:7px 14px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--muted);white-space:nowrap;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+.pf.on{color:var(--text);border-color:var(--cyan);}
+.pulse-list{flex:1;overflow-y:auto;padding:0 14px 8px;scrollbar-width:none;}
+.pulse-list::-webkit-scrollbar{display:none;}
+.pi{display:flex;gap:12px;padding:14px;background:var(--bg3);border-radius:var(--r2);margin-bottom:8px;border:1px solid var(--border);}
+.pi-thumb{width:46px;height:46px;border-radius:var(--r3);background-size:cover;background-position:center;filter:brightness(.75);flex-shrink:0;}
+.pi-body{flex:1;min-width:0;}
+.pi-meta{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.pi-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.pi-user{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--muted);}
+.pi-text{font-size:13px;font-weight:500;line-height:1.4;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pi-time{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);}
+#notif-screen{padding-bottom:76px;}
+.notif-list{flex:1;overflow-y:auto;padding:8px 14px;scrollbar-width:none;}
+.notif-list::-webkit-scrollbar{display:none;}
+.ng-lbl{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:8px 2px 10px;}
+.ni-card{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;background:var(--bg3);border-radius:var(--r2);margin-bottom:8px;border:1px solid var(--border);position:relative;}
+.ni-card.unread{border-color:rgba(0,200,240,.2);}
+.ni-pip{position:absolute;top:15px;right:15px;width:7px;height:7px;border-radius:50%;background:var(--cyan);}
+.ni-av{width:40px;height:40px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ni-text{flex:1;font-size:13px;line-height:1.55;color:rgba(255,255,255,.82);}
+.ni-text strong{color:#fff;font-weight:600;}
+.ni-time{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);margin-top:4px;}
+#me-screen{padding-bottom:76px;}
+.prof-hdr{padding:52px 22px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.prof-hdr-title{font-family:"Syne",sans-serif;font-size:22px;font-weight:800;}
+.prof-settings-btn{width:42px;height:42px;border-radius:var(--r2);background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.prof-settings-btn svg{width:22px;height:22px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.prof-scroll{flex:1;overflow-y:auto;scrollbar-width:none;}
+.prof-scroll::-webkit-scrollbar{display:none;}
+.prof-hero{padding:10px 22px 24px;display:flex;align-items:center;gap:18px;}
+.prof-av-wrap{position:relative;flex-shrink:0;}
+.prof-av-ring{width:82px;height:82px;border-radius:50%;padding:2.5px;background:linear-gradient(135deg,var(--green),var(--cyan));}
+.prof-av{width:100%;height:100%;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.prof-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.prof-av svg{width:36px;height:36px;stroke:var(--muted);fill:none;stroke-width:1.5;}
+.prof-verified{position:absolute;bottom:2px;right:2px;width:20px;height:20px;border-radius:50%;background:var(--green);border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;}
+.prof-verified svg{width:10px;height:10px;stroke:#070709;fill:none;stroke-width:3;}
+.prof-info{flex:1;}
+.prof-name{font-family:"Syne",sans-serif;font-size:20px;font-weight:800;margin-bottom:3px;}
+.prof-handle{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--green);letter-spacing:.08em;margin-bottom:10px;}
+.prof-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(0,232,122,.08);border:1px solid rgba(0,232,122,.2);font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);}
+.prof-badge svg{width:10px;height:10px;stroke:var(--green);fill:none;stroke-width:2.5;}
+.prof-stats{display:grid;grid-template-columns:repeat(3,1fr);margin:0 16px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);overflow:hidden;}
+.pstat{padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;border-right:1px solid var(--border);}
+.pstat:last-child{border-right:none;}
+.pstat-n{font-family:"Syne",sans-serif;font-size:20px;font-weight:800;}
+.pstat-l{font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+.prof-sec{padding:20px 16px 0;}
+.prof-sec-t{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.prof-pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.mp{padding:12px 13px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border);display:flex;align-items:center;gap:9px;cursor:pointer;}
+.mp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.mp-n{font-size:13px;font-weight:600;margin-bottom:1px;}
+.mp-p{font-size:10px;color:var(--muted);}
+.acct-item{display:flex;align-items:center;gap:14px;padding:15px 16px;background:var(--bg3);border-radius:var(--r2);margin-bottom:8px;cursor:pointer;border:1px solid var(--border);-webkit-tap-highlight-color:transparent;}
+.acct-ic{width:38px;height:38px;border-radius:var(--r3);background:var(--subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.acct-ic svg{width:18px;height:18px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.acct-ic.red svg{stroke:var(--red);}
+.acct-lbl{flex:1;font-size:14px;font-weight:500;}
+.acct-lbl.red{color:var(--red);}
+.acct-arr svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;}
+#settings-screen{padding-bottom:76px;}
+.set-scroll{flex:1;overflow-y:auto;scrollbar-width:none;}
+.set-scroll::-webkit-scrollbar{display:none;}
+.set-sec{padding:16px 16px 0;}
+.set-sec-t{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.set-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:16px;}
+.set-row{display:flex;align-items:center;gap:12px;padding:15px 16px;border-bottom:1px solid var(--border);}
+.set-row:last-child{border-bottom:none;}
+.set-row-ic{width:32px;height:32px;border-radius:var(--r3);background:var(--subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.set-row-ic svg{width:16px;height:16px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.set-row-ic.red svg{stroke:var(--red);}
+.set-row-l{flex:1;font-size:14px;font-weight:500;}
+.set-row-l.red{color:var(--red);}
+.set-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);padding:8px 12px;color:var(--text);font-family:"Space Grotesk",sans-serif;font-size:14px;outline:none;max-width:160px;transition:border-color .2s;}
+.set-input:focus{border-color:rgba(0,232,122,.4);}
+.toggle{width:44px;height:24px;border-radius:12px;background:var(--subtle);border:1px solid var(--border);position:relative;cursor:pointer;transition:background .25s;flex-shrink:0;}
+.toggle.on{background:var(--green);}
+.tk{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .25s;}
+.toggle.on .tk{transform:translateX(20px);}
+.swatches{display:flex;gap:8px;}
+.sw{width:26px;height:26px;border-radius:50%;cursor:pointer;transition:transform .2s;border:2px solid transparent;}
+.sw.on{transform:scale(1.2);border-color:#fff;}
+.pic-upload-row{display:flex;align-items:center;gap:12px;padding:15px 16px;border-bottom:1px solid var(--border);}
+.pic-preview{width:48px;height:48px;border-radius:50%;background:var(--subtle);overflow:hidden;border:2px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.pic-preview img{width:100%;height:100%;object-fit:cover;}
+.pic-preview svg{width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.5;}
+.pic-btns{display:flex;flex-direction:column;gap:7px;}
+.pic-btn{display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--subtle);border-radius:var(--r3);cursor:pointer;font-size:12px;font-weight:600;color:var(--text);-webkit-tap-highlight-color:transparent;}
+.pic-btn svg{width:14px;height:14px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.dm-modal{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;background:var(--bg);}
+.dm-modal.show{display:flex;animation:pgIn .28s cubic-bezier(.22,1,.36,1);}
+.dm-hdr{padding:52px 20px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.dm-av-wrap{position:relative;}
+.dm-av{width:36px;height:36px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:15px;overflow:hidden;}
+.dm-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.dm-online{position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--green);border:2px solid var(--bg);}
+.dm-info{flex:1;}
+.dm-uname{font-size:15px;font-weight:600;}
+.dm-status{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--green);margin-top:1px;}
+.dm-calls{display:flex;gap:10px;}
+.dm-call-btn{width:34px;height:34px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.dm-call-btn svg{width:15px;height:15px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.dm-msgs{flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:none;}
+.dm-msgs::-webkit-scrollbar{display:none;}
+.dm-msg{display:flex;margin-bottom:12px;gap:8px;}
+.dm-msg.mine{flex-direction:row-reverse;}
+.dm-msg-av{width:28px;height:28px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;align-self:flex-end;overflow:hidden;}
+.dm-msg-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.dm-bubble{max-width:74%;padding:10px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;}
+.dm-msg:not(.mine) .dm-bubble{background:var(--bg3);border:1px solid var(--border);border-radius:4px 16px 16px 16px;}
+.dm-msg.mine .dm-bubble{border-radius:16px 4px 16px 16px;color:#070709;}
+.dm-t{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);margin-top:3px;}
+.dm-compose{padding:10px 16px 32px;display:flex;gap:10px;border-top:1px solid var(--border);}
+.dm-in{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:11px 14px;color:var(--text);font-family:"Space Grotesk",sans-serif;font-size:14px;outline:none;resize:none;}
+.dm-send{width:42px;height:42px;border-radius:var(--r2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dm-send svg{width:17px;height:17px;stroke:#070709;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+#privacy-screen,#terms-screen{padding-bottom:76px;}
+.legal-body{flex:1;overflow-y:auto;padding:20px 20px 40px;scrollbar-width:none;}
+.legal-body::-webkit-scrollbar{display:none;}
+.legal-title{font-family:"Syne",sans-serif;font-size:22px;font-weight:800;margin-bottom:6px;}
+.legal-updated{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);margin-bottom:28px;}
+.legal-section-title{font-size:14px;font-weight:700;color:var(--green);margin:22px 0 8px;}
+.legal-text{font-size:13px;color:rgba(255,255,255,.72);line-height:1.75;}
+.legal-text p{margin-bottom:10px;}
+.legal-text ul{padding-left:16px;margin-bottom:10px;}
+.legal-text li{margin-bottom:5px;}
+.side-wrap{position:fixed;inset:0;z-index:800;display:none;}
+.side-wrap.show{display:flex;}
+.side-bg{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);}
+.side-panel{position:absolute;top:0;left:0;bottom:0;width:72%;max-width:290px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:58px 24px 40px;animation:pgIn .25s cubic-bezier(.22,1,.36,1);}
+.side-av-row{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.side-av{width:46px;height:46px;border-radius:50%;background:var(--bg3);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.side-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.side-av svg{width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.5;}
+.side-name{font-family:"Syne",sans-serif;font-size:16px;font-weight:800;}
+.side-handle-t{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);margin-top:1px;}
+.side-div{height:1px;background:var(--border);margin:18px 0;}
+.side-item{display:flex;align-items:center;gap:14px;padding:13px 0;cursor:pointer;}
+.side-ic svg{width:20px;height:20px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.side-lbl{font-size:15px;font-weight:500;}
+.side-footer{margin-top:auto;}
+.side-logout{display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 0;}
+.side-logout svg{width:20px;height:20px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.side-logout-lbl{color:var(--red);font-size:14px;font-weight:600;}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(7,7,9,.95);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;padding:10px 0 26px;z-index:500;}
+.ni{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 16px;opacity:.35;transition:opacity .2s;-webkit-tap-highlight-color:transparent;}
+.ni.on{opacity:1;}
+.nic{display:flex;align-items:center;justify-content:center;width:24px;height:24px;transition:transform .15s;}
+.nic svg{width:24px;height:24px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.ni.on .nic svg{stroke:var(--cyan);}
+.ni.on .nic{filter:drop-shadow(0 0 5px rgba(0,200,240,.5));}
+.ni:active .nic{transform:scale(.88);}
+.nil{font-family:"JetBrains Mono",monospace;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.ni.on .nil{color:var(--cyan);}
+.nw{position:relative;}
+.npip{position:absolute;top:-2px;right:-4px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg);animation:pulse 2s ease-in-out infinite;}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="loader">
+  <svg viewBox="0 0 80 90" fill="none">
+    <defs><radialGradient id="lg0"><stop offset="0%" stop-color="#00e87a"/><stop offset="100%" stop-color="#00b85e"/></radialGradient></defs>
+    <path d="M40 68 Q38 78 35 88" stroke="#00b85e" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg0)" opacity=".9" transform="rotate(-10,40,40)"/>
+    <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg0)" opacity=".9" transform="rotate(80,40,40)"/>
+    <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg0)" opacity=".9" transform="rotate(170,40,40)"/>
+    <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg0)" opacity=".9" transform="rotate(260,40,40)"/>
+    <circle cx="40" cy="40" r="5" fill="#00e87a"/><circle cx="40" cy="40" r="3" fill="#fff" opacity=".5"/>
+  </svg>
+  <p>LOADING CLOVER</p>
+</div>
+
+<!-- AUTH LOGIN -->
+<div class="screen" id="auth-login">
+  <div class="auth-wrap fu">
+    <svg class="auth-logo" viewBox="0 0 80 90" fill="none">
+      <defs><radialGradient id="lg1"><stop offset="0%" stop-color="#00e87a"/><stop offset="100%" stop-color="#00b85e"/></radialGradient></defs>
+      <path d="M40 68 Q38 78 35 88" stroke="#00b85e" stroke-width="3" stroke-linecap="round"/>
+      <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg1)" opacity=".9" transform="rotate(-10,40,40)"/>
+      <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg1)" opacity=".9" transform="rotate(80,40,40)"/>
+      <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg1)" opacity=".9" transform="rotate(170,40,40)"/>
+      <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#lg1)" opacity=".9" transform="rotate(260,40,40)"/>
+      <circle cx="40" cy="40" r="5" fill="#00e87a"/><circle cx="40" cy="40" r="3" fill="#fff" opacity=".5"/>
+    </svg>
+    <div class="auth-brand">CLOVER</div>
+    <div class="auth-tag">4 Pillars · 1 Community</div>
+    <div class="auth-fw">
+      <div class="auth-field-wrap">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <input class="auth-field" id="li-email" type="email" placeholder="Email address" autocomplete="email"/>
+      </div>
+      <div class="auth-field-wrap">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input class="auth-field" id="li-pass" type="password" placeholder="Password" autocomplete="current-password"/>
+      </div>
+      <div class="auth-err" id="li-err"></div>
+      <button class="auth-cta" id="li-btn" onclick="doLogin()">Sign In</button>
+    </div>
+    <div class="auth-switch">New to Clover? <span onclick="nav('auth-register')">Create an account</span></div>
+    <div class="auth-links">
+      <span class="auth-link" onclick="navLegal('privacy-screen')">Privacy Policy</span>
+      <span class="auth-link" onclick="navLegal('terms-screen')">Terms of Service</span>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH REGISTER -->
+<div class="screen" id="auth-register">
+  <div class="auth-wrap fu">
+    <div class="auth-brand" style="margin-bottom:5px;">Join Clover</div>
+    <div class="auth-tag" style="margin-bottom:28px;">Create your free account</div>
+    <div class="auth-fw">
+      <div class="auth-field-wrap">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <input class="auth-field" id="rg-name" type="text" placeholder="Display name" maxlength="24"/>
+      </div>
+      <div class="auth-field-wrap">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <input class="auth-field" id="rg-handle" type="text" placeholder="Username  e.g. clover_you" maxlength="22"/>
+      </div>
+      <div class="auth-field-wrap">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <input class="auth-field" id="rg-email" type="email" placeholder="Email address" autocomplete="email"/>
+      </div>
+      <div class="auth-field-wrap">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input class="auth-field" id="rg-pass" type="password" placeholder="Password  (min 6 characters)" autocomplete="new-password"/>
+      </div>
+      <div class="auth-err" id="rg-err"></div>
+      <button class="auth-cta" id="rg-btn" onclick="doRegister()">Create Account</button>
+      <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.6;">By creating an account you agree to our <span style="color:var(--green);cursor:pointer;" onclick="navLegal('terms-screen')">Terms</span> and <span style="color:var(--green);cursor:pointer;" onclick="navLegal('privacy-screen')">Privacy Policy</span>.</p>
+    </div>
+    <div class="auth-switch" style="margin-top:16px;">Already have an account? <span onclick="nav('auth-login')">Sign in</span></div>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div class="screen" id="onboard">
+  <div class="ob-inner">
+    <div id="ob1" class="ob-content active">
+      <svg class="ob-logo" viewBox="0 0 80 90" fill="none">
+        <defs><radialGradient id="obg"><stop offset="0%" stop-color="#00e87a"/><stop offset="100%" stop-color="#00b85e"/></radialGradient></defs>
+        <path d="M40 68 Q38 78 35 88" stroke="#00b85e" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#obg)" opacity=".9" transform="rotate(-10,40,40)"/>
+        <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#obg)" opacity=".9" transform="rotate(80,40,40)"/>
+        <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#obg)" opacity=".9" transform="rotate(170,40,40)"/>
+        <ellipse cx="40" cy="40" rx="14" ry="20" fill="url(#obg)" opacity=".9" transform="rotate(260,40,40)"/>
+        <circle cx="40" cy="40" r="5" fill="#00e87a"/><circle cx="40" cy="40" r="3" fill="#fff" opacity=".5"/>
+      </svg>
+      <div class="ob-brand">CLOVER</div>
+      <div class="ob-dots"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+      <div class="ob-h">Welcome aboard 👋</div>
+      <div class="ob-p">Your all-in-one community hub. Learn, create, connect and grow with people worldwide.</div>
+      <button class="ob-cta" onclick="obGo(2)">Get Started</button>
+    </div>
+    <div id="ob2" class="ob-content">
+      <div class="ob-step-lbl">Step 1 of 2 — Your Identity</div>
+      <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div></div>
+      <div class="ob-h">Set up your profile</div>
+      <div class="ob-p" style="margin-bottom:24px;">What should the community call you?</div>
+      <input class="ob-field" id="ob-name" placeholder="Display name" maxlength="24"/>
+      <input class="ob-field" id="ob-handle" placeholder="Username  e.g. clover_you" maxlength="22" style="margin-bottom:24px;"/>
+      <button class="ob-cta" onclick="obGo(3)">Continue</button>
+    </div>
+    <div id="ob3" class="ob-content">
+      <div class="ob-step-lbl">Step 2 of 2 — Your Interests</div>
+      <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div></div>
+      <div class="ob-h">Pick your pillars</div>
+      <div class="ob-p" style="margin-bottom:16px;">Choose at least 2 to get started.</div>
+      <div class="ob-pill-list" id="ob-pill-list"></div>
+      <button class="ob-cta" onclick="obFinish()">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="screen" id="home">
+  <div class="home-top fu">
+    <div>
+      <div class="home-logo-row">
+        <svg class="home-logo-svg" viewBox="0 0 40 44" fill="none">
+          <defs><radialGradient id="hg"><stop offset="0%" stop-color="#00e87a"/><stop offset="100%" stop-color="#00b85e"/></radialGradient></defs>
+          <path d="M20 34 Q19 39 17 43" stroke="#00b85e" stroke-width="2.5" stroke-linecap="round"/>
+          <ellipse cx="20" cy="20" rx="9" ry="13" fill="url(#hg)" opacity=".9" transform="rotate(-10,20,20)"/>
+          <ellipse cx="20" cy="20" rx="9" ry="13" fill="url(#hg)" opacity=".9" transform="rotate(80,20,20)"/>
+          <ellipse cx="20" cy="20" rx="9" ry="13" fill="url(#hg)" opacity=".9" transform="rotate(170,20,20)"/>
+          <ellipse cx="20" cy="20" rx="9" ry="13" fill="url(#hg)" opacity=".9" transform="rotate(260,20,20)"/>
+          <circle cx="20" cy="20" r="4" fill="#00e87a"/><circle cx="20" cy="20" r="2.5" fill="#fff" opacity=".5"/>
+        </svg>
+        <span class="home-brand">CLOVER</span>
+      </div>
+      <div class="home-greeting">Hey, <span id="home-name">Explorer</span> 👋</div>
+    </div>
+    <div class="hdr-actions">
+      <div class="hdr-btn" onclick="showNotifs()"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="pip" id="h-pip" style="display:none"></div></div>
+      <div class="hdr-btn" onclick="showSide()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>
+    </div>
+  </div>
+  <div class="ticker-wrap fu d1"><div class="ticker-label">LIVE</div><div class="ticker-text" id="ticker-text"><strong>Sports Arena</strong> · Football — Match updates live</div></div>
+  <div class="home-search fu d2"><input type="text" placeholder="Search pillars, topics, people…" oninput="searchPillars(this.value)"/></div>
+  <div class="sec-label fu d3"><span>EXPLORE PILLARS</span><em id="pillar-count">8 pillars</em></div>
+  <div class="p-scroll"><div class="p-grid" id="home-grid"></div></div>
+</div>
+
+<!-- DETAIL -->
+<div class="screen" id="detail">
+  <div class="det-hdr fu">
+    <div class="hdr-back" onclick="nav('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <div class="det-title-wrap"><div class="det-bread">PILLARS</div><div class="det-title" id="det-title">Tech Hub</div></div>
+    <div style="width:38px"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="det-scroll"><div class="sub-grid" id="sub-grid"></div></div>
+</div>
+
+<!-- FEED -->
+<div class="screen" id="feed">
+  <div class="feed-hdr fu">
+    <div class="hdr-back" onclick="nav('detail')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <div class="feed-tb"><div class="feed-bread" id="feed-bread">TECH HUB</div><div class="feed-title" id="feed-title">AI Drawing</div></div>
+    <div style="width:38px"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="feed-banner fu d1">
+    <div class="fb-img" id="feed-bg"></div>
+    <div class="fb-ov" id="feed-ov"></div>
+    <div class="fb-content">
+      <div class="fb-left"><h3 id="feed-bh">AI Drawing</h3><p id="feed-bp">Tech Hub · Community</p></div>
+      <div style="text-align:right"><div class="fb-mc" id="feed-mc">0 members</div><div class="fb-online">● Live</div></div>
+    </div>
+  </div>
+  <div class="feed-tabs fu d2">
+    <div class="ftab on" onclick="tab(this,'posts')">Posts</div>
+    <div class="ftab" onclick="tab(this,'members')">Members</div>
+    <div class="ftab" onclick="tab(this,'media')">Media</div>
+  </div>
+  <div class="compose-bar fu d3">
+    <div class="c-av" id="c-av-el"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div class="c-field" onclick="doCompose()">Share something with the community…</div>
+    <button class="c-post" id="c-post" onclick="doCompose()">Post</button>
+  </div>
+  <div class="feed-scroll" id="feed-posts"></div>
+</div>
+
+<!-- PULSE -->
+<div class="screen" id="pulse-screen">
+  <div class="pulse-hdr fu">
+    <div>
+      <div class="pulse-h">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke:url(#pg)">
+          <defs><linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f04060"/><stop offset="100%" stop-color="#f5a623"/></linearGradient></defs>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>Pulse
+      </div>
+      <div class="pulse-sub">Live community activity</div>
+    </div>
+    <div class="pulse-lc" id="pulse-count">0 active</div>
+  </div>
+  <div class="divider"></div>
+  <div class="pulse-filters fu d1">
+    <div class="pf on" onclick="pulseFilter(this,'all')">All</div>
+    <div class="pf" onclick="pulseFilter(this,'tech')">Tech</div>
+    <div class="pf" onclick="pulseFilter(this,'sports')">Sports</div>
+    <div class="pf" onclick="pulseFilter(this,'creative')">Creative</div>
+    <div class="pf" onclick="pulseFilter(this,'social')">Social</div>
+    <div class="pf" onclick="pulseFilter(this,'health')">Health</div>
+  </div>
+  <div class="pulse-list scrollable" id="pulse-list"></div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div class="screen" id="notif-screen">
+  <div class="hdr fu">
+    <div class="hdr-back" onclick="nav('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <span class="hdr-title">Notifications</span>
+    <span style="font-size:12px;color:var(--cyan);cursor:pointer;font-weight:600;" onclick="clearNotifs()">Clear all</span>
+  </div>
+  <div class="divider"></div>
+  <div class="notif-list scrollable" id="notif-list"><div class="no-posts">No notifications yet.</div></div>
+</div>
+
+<!-- PROFILE -->
+<div class="screen" id="me-screen">
+  <div class="prof-hdr fu">
+    <div class="prof-hdr-title">Profile</div>
+    <div class="prof-settings-btn" onclick="nav('settings-screen')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="prof-scroll">
+    <div class="prof-hero fu d1">
+      <div class="prof-av-wrap">
+        <div class="prof-av-ring"><div class="prof-av" id="prof-av-el"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div></div>
+        <div class="prof-verified"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="prof-info">
+        <div class="prof-name" id="prof-name">Clover Pilot</div>
+        <div class="prof-handle" id="prof-handle">@clover_pilot</div>
+        <div class="prof-badge"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Verified Member</div>
+      </div>
+    </div>
+    <div class="prof-stats fu d2">
+      <div class="pstat"><span class="pstat-n" id="ps-pillars">0</span><span class="pstat-l">Pillars</span></div>
+      <div class="pstat"><span class="pstat-n" id="ps-posts">0</span><span class="pstat-l">Posts</span></div>
+      <div class="pstat"><span class="pstat-n" id="ps-likes">0</span><span class="pstat-l">Likes</span></div>
+    </div>
+    <div class="prof-sec fu d3">
+      <div class="prof-sec-t">My Pillars</div>
+      <div class="prof-pillar-grid" id="prof-pillar-grid"></div>
+    </div>
+    <div class="prof-sec fu d4">
+      <div class="prof-sec-t">Account</div>
+      <div class="acct-item" onclick="nav('settings-screen')"><div class="acct-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div class="acct-lbl">Settings</div><div class="acct-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+      <div class="acct-item" onclick="showNotifs()"><div class="acct-ic"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="acct-lbl">Notifications</div><div class="acct-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+      <div class="acct-item"><div class="acct-ic"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="acct-lbl">Messages</div><div class="acct-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+      <div class="acct-item"><div class="acct-ic"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div><div class="acct-lbl">Bookmarks</div><div class="acct-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+      <div class="acct-item" onclick="navLegal('privacy-screen')"><div class="acct-ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="acct-lbl">Privacy Policy</div><div class="acct-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+      <div class="acct-item" onclick="navLegal('terms-screen')"><div class="acct-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="acct-lbl">Terms of Service</div><div class="acct-arr"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div></div>
+      <div class="acct-item" onclick="doLogout()"><div class="acct-ic red"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="acct-lbl red">Logout</div></div>
+    </div>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="settings-screen">
+  <div class="hdr fu">
+    <div class="hdr-back" onclick="nav('me-screen')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <span class="hdr-title">Settings</span>
+    <div style="width:38px"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="set-scroll">
+    <div class="set-sec">
+      <div class="set-sec-t">Profile Photo</div>
+      <div class="set-card">
+        <div class="pic-upload-row">
+          <div class="pic-preview" id="pic-preview"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="pic-btns">
+            <label class="pic-btn" for="pic-cam-in">
+              <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Take a selfie
+            </label>
+            <label class="pic-btn" for="pic-file-in">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Choose from gallery
+            </label>
+          </div>
+          <input type="file" id="pic-file-in" accept="image/*" onchange="handlePic(event)" style="position:absolute;opacity:0;width:0;height:0;"/>
+          <input type="file" id="pic-cam-in" accept="image/*" capture="user" onchange="handlePic(event)" style="position:absolute;opacity:0;width:0;height:0;"/>
+        </div>
+      </div>
+      <div class="set-sec-t">Profile</div>
+      <div class="set-card">
+        <div class="set-row"><div class="set-row-ic"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="set-row-l">Display Name</div><input class="set-input" id="set-name" placeholder="Your name" oninput="liveUpdateName(this.value)"/></div>
+        <div class="set-row"><div class="set-row-ic" style="font-family:monospace;font-size:14px;font-weight:700;color:var(--muted);">@</div><div class="set-row-l">Username</div><input class="set-input" id="set-handle" placeholder="@username"/></div>
+        <div class="set-row"><div class="set-row-ic"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="set-row-l">Bio</div><input class="set-input" id="set-bio" placeholder="About you…"/></div>
+      </div>
+      <div class="set-sec-t">Theme</div>
+      <div class="set-card">
+        <div class="set-row"><div class="set-row-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg></div><div class="set-row-l">Background</div>
+          <div class="swatches">
+            <div class="sw on" style="background:#070709" onclick="setTheme('#070709',this)"></div>
+            <div class="sw" style="background:#090f1a" onclick="setTheme('#090f1a',this)"></div>
+            <div class="sw" style="background:#0f0914" onclick="setTheme('#0f0914',this)"></div>
+            <div class="sw" style="background:#0a140a" onclick="setTheme('#0a140a',this)"></div>
+            <div class="sw" style="background:#14100a" onclick="setTheme('#14100a',this)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="set-sec-t">Privacy</div>
+      <div class="set-card">
+        <div class="set-row"><div class="set-row-ic"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="set-row-l">Private Account</div><div class="toggle on" onclick="tog(this)"><div class="tk"></div></div></div>
+        <div class="set-row"><div class="set-row-ic"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="set-row-l">Push Notifications</div><div class="toggle on" onclick="tog(this)"><div class="tk"></div></div></div>
+        <div class="set-row"><div class="set-row-ic"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="set-row-l">Show Online Status</div><div class="toggle on" onclick="tog(this)"><div class="tk"></div></div></div>
+      </div>
+      <div class="set-card">
+        <div class="set-row" onclick="doLogout()" style="cursor:pointer"><div class="set-row-ic red"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="set-row-l red">Logout</div></div>
+      </div>
+    </div>
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- PRIVACY POLICY -->
+<div class="screen" id="privacy-screen">
+  <div class="hdr fu">
+    <div class="hdr-back" id="privacy-back"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <span class="hdr-title">Privacy Policy</span>
+    <div style="width:38px"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="legal-body">
+    <div class="legal-title">Privacy Policy</div>
+    <div class="legal-updated">Last updated: January 1, 2025</div>
+    <div class="legal-text">
+      <p>Clover is committed to protecting your privacy. This policy explains how we collect, use, and protect your personal information.</p>
+      <div class="legal-section-title">1. Information We Collect</div>
+      <ul><li><strong>Account info:</strong> Email address, display name, username.</li><li><strong>Profile content:</strong> Profile photos you choose to upload.</li><li><strong>User content:</strong> Posts, replies, and direct messages.</li><li><strong>Usage data:</strong> Which communities you join and interact with.</li></ul>
+      <div class="legal-section-title">2. How We Use Your Information</div>
+      <ul><li>To create and manage your account.</li><li>To display your profile and content to other users.</li><li>To personalise your experience based on your chosen pillars.</li><li>To improve and maintain the Clover platform.</li></ul>
+      <div class="legal-section-title">3. Firebase & Data Storage</div>
+      <p>Clover uses Google Firebase to store your data securely. Firebase Authentication handles your email and password — we never store your raw password. Your data is stored in Google's secure cloud infrastructure. By using Clover, you also agree to Google's Privacy Policy at policies.google.com/privacy.</p>
+      <div class="legal-section-title">4. Data Sharing</div>
+      <p>We do not sell your personal information. We only share data with Google Firebase (our infrastructure provider) or when required by law.</p>
+      <div class="legal-section-title">5. Your Rights</div>
+      <ul><li><strong>Access:</strong> View all your data in your profile.</li><li><strong>Correction:</strong> Update your name, username, and photo in Settings.</li><li><strong>Deletion:</strong> Request account deletion by contacting us. This permanently deletes your account and associated data.</li></ul>
+      <div class="legal-section-title">6. Children's Privacy</div>
+      <p>Clover is not intended for users under 13. We do not knowingly collect information from children under 13. If we become aware of this, we will delete the data immediately.</p>
+      <div class="legal-section-title">7. Data Security</div>
+      <p>We use encrypted password storage via Firebase Authentication, HTTPS transmission, and Firebase security rules to protect your data.</p>
+      <div class="legal-section-title">8. Contact</div>
+      <p>Questions or data deletion requests: <strong>privacy@clover.app</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- TERMS OF SERVICE -->
+<div class="screen" id="terms-screen">
+  <div class="hdr fu">
+    <div class="hdr-back" id="terms-back"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <span class="hdr-title">Terms of Service</span>
+    <div style="width:38px"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="legal-body">
+    <div class="legal-title">Terms of Service</div>
+    <div class="legal-updated">Last updated: January 1, 2025</div>
+    <div class="legal-text">
+      <p>By creating an account or using Clover, you agree to these Terms. Please read them carefully.</p>
+      <div class="legal-section-title">1. Acceptance</div>
+      <p>By accessing Clover, you confirm you are at least 13 years old and agree to these Terms. If you do not agree, do not use the app.</p>
+      <div class="legal-section-title">2. Your Account</div>
+      <ul><li>You are responsible for maintaining the security of your account.</li><li>You must provide accurate information when registering.</li><li>You may not share your account or create accounts on behalf of others.</li><li>You are responsible for all activity under your account.</li></ul>
+      <div class="legal-section-title">3. User Content</div>
+      <p>You retain ownership of content you post. By posting, you grant Clover a non-exclusive, royalty-free licence to display your content within the platform. You agree not to post content that is illegal, harmful, harassing, hateful, sexually explicit, or spam.</p>
+      <div class="legal-section-title">4. Community Rules</div>
+      <ul><li>Treat all members with respect.</li><li>Keep discussions relevant to the community topic.</li><li>Do not engage in harassment, bullying, or abuse.</li><li>Report content that violates these terms.</li></ul>
+      <div class="legal-section-title">5. Termination</div>
+      <p>We reserve the right to suspend or terminate your account if you violate these Terms. You may delete your account at any time by contacting us.</p>
+      <div class="legal-section-title">6. Disclaimers</div>
+      <p>Clover is provided "as is" without warranties. We do not guarantee uninterrupted service or that user-generated content is accurate.</p>
+      <div class="legal-section-title">7. Limitation of Liability</div>
+      <p>To the fullest extent permitted by law, Clover is not liable for indirect, incidental, or consequential damages from your use of the platform.</p>
+      <div class="legal-section-title">8. Changes</div>
+      <p>We may update these Terms. Continued use after changes means you accept the updated Terms.</p>
+      <div class="legal-section-title">9. Contact</div>
+      <p>Questions about these Terms: <strong>legal@clover.app</strong></p>
+    </div>
+  </div>
+</div>
+
+<!-- DM MODAL -->
+<div class="dm-modal" id="dm">
+  <div class="dm-hdr">
+    <div class="hdr-back" onclick="closeDM()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+    <div class="dm-av-wrap"><div class="dm-av" id="dm-av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:20px;height:20px;stroke:var(--muted)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="dm-online"></div></div>
+    <div class="dm-info"><div class="dm-uname" id="dm-uname">@CloverBot</div><div class="dm-status">● Online</div></div>
+    <div class="dm-calls">
+      <div class="dm-call-btn"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.98a16 16 0 0 0 6.29 6.29l1.88-1.88a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+      <div class="dm-call-btn"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="dm-msgs" id="dm-msgs"></div>
+  <div class="dm-compose">
+    <textarea class="dm-in" id="dm-in" placeholder="Message…" rows="1" onkeydown="dmKey(event)"></textarea>
+    <button class="dm-send" id="dm-send" onclick="sendDM()"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+  </div>
+</div>
+
+<!-- SIDE MENU -->
+<div class="side-wrap" id="side">
+  <div class="side-bg" onclick="hideSide()"></div>
+  <div class="side-panel">
+    <div class="side-av-row">
+      <div class="side-av" id="side-av-el"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div><div class="side-name" id="side-name">Clover</div><div class="side-handle-t" id="side-handle">@clover</div></div>
+    </div>
+    <div class="side-div"></div>
+    <div class="side-item" onclick="hideSide();nav('home')"><div class="side-ic"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="side-lbl">Dashboard</div></div>
+    <div class="side-item" onclick="hideSide();nav('me-screen')"><div class="side-ic"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="side-lbl">Profile</div></div>
+    <div class="side-item" onclick="hideSide();nav('settings-screen')"><div class="side-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div class="side-lbl">Settings</div></div>
+    <div class="side-item" onclick="hideSide();navLegal('privacy-screen')"><div class="side-ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="side-lbl">Privacy Policy</div></div>
+    <div class="side-item" onclick="hideSide();navLegal('terms-screen')"><div class="side-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="side-lbl">Terms of Service</div></div>
+    <div class="side-footer">
+      <div class="side-logout" onclick="doLogout()">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="side-logout-lbl">Logout</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav" id="bnav" style="display:none">
+  <div class="ni on" id="ni-home" onclick="nav('home')"><span class="nic"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span class="nil">Home</span></div>
+  <div class="ni" id="ni-pulse-screen" onclick="nav('pulse-screen')"><span class="nic"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span class="nil">Pulse</span></div>
+  <div class="ni" id="ni-notif-screen" onclick="showNotifs()"><div class="nw"><span class="nic"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><div class="npip" id="n-pip" style="display:none"></div></div><span class="nil">Alerts</span></div>
+  <div class="ni" id="ni-me-screen" onclick="nav('me-screen')"><span class="nic"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="nil">Profile</span></div>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const PILLARS=[
+  {id:'tech',title:'Tech Hub',cls:'p-tech',color:'var(--purple)',sub:'AI · Code · Crypto · Gaming',img:'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',subs:[{id:'ai',l:'AI Drawing',n:'312',img:'https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=300&q=65'},{id:'coding',l:'Coding',n:'540',img:'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=300&q=65'},{id:'crypto',l:'Crypto',n:'228',img:'https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=300&q=65'},{id:'gaming',l:'Gaming',n:'891',img:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=300&q=65',live:true}]},
+  {id:'hlth',title:'Vitality Zone',cls:'p-hlth',color:'var(--gold)',sub:'Yoga · Gym · Nutrition · Zen',img:'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',subs:[{id:'yoga',l:'Yoga',n:'187',img:'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=300&q=65'},{id:'gym',l:'Gym',n:'463',img:'https://images.unsplash.com/photo-1517963879433-6ad2b056d712?w=300&q=65'},{id:'nutri',l:'Nutrition',n:'214',img:'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=300&q=65'},{id:'zen',l:'Zen',n:'99',img:'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=300&q=65'}]},
+  {id:'cre',title:'Creativity',cls:'p-cre',color:'var(--pink)',sub:'Music · Design · Fashion · Film',img:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>',subs:[{id:'photo',l:'Photography',n:'332',img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=65'},{id:'music',l:'Music',n:'418',img:'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&q=65'},{id:'design',l:'Design',n:'267',img:'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=300&q=65'},{id:'fashion',l:'Fashion',n:'195',img:'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=300&q=65'}]},
+  {id:'biz',title:'Business Pro',cls:'p-biz',color:'var(--green)',sub:'Stocks · Startups · Real Estate · Wholesale',img:'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',subs:[{id:'stocks',l:'Stocks',n:'321',img:'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=300&q=65'},{id:'startup',l:'Startups',n:'284',img:'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=300&q=65'},{id:'realty',l:'Real Estate',n:'156',img:'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=300&q=65'},{id:'wholesale',l:'Wholesale & Retail',n:'389',img:'https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=300&q=65'}]},
+  {id:'soc',title:'Social Sphere',cls:'p-soc',color:'var(--cyan)',sub:'Connections · News · Politics · Zero Trace',img:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',subs:[{id:'connect',l:'Connections',n:'744',img:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=300&q=65'},{id:'ztrace',l:'Zero Trace',n:'88',img:'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=300&q=65'},{id:'politics',l:'Politics',n:'629',img:'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=300&q=65'},{id:'gnews',l:'Global News',n:'1.2k',img:'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=300&q=65',live:true}]},
+  {id:'spt',title:'Sports Arena',cls:'p-spt',color:'var(--red)',sub:'F1 · Basketball · Boxing · Football',img:'https://images.unsplash.com/photo-1540747913346-19212a4b423b?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',subs:[{id:'f1',l:'Formula 1',n:'567',img:'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=300&q=65',live:true},{id:'basket',l:'Basketball',n:'832',img:'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=300&q=65',live:true},{id:'boxing',l:'Boxing',n:'319',img:'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=300&q=65'},{id:'football',l:'Football',n:'1.4k',img:'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=300&q=65',live:true}]},
+  {id:'sci',title:'Sciences',cls:'p-sci',color:'var(--cyan)',sub:'Space · Physics · Discovery · History',img:'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>',subs:[{id:'space',l:'Space',n:'488',img:'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=300&q=65'},{id:'physics',l:'Physics',n:'213',img:'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=300&q=65'},{id:'discov',l:'Discovery & Facts',n:'241',img:'https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=300&q=65'},{id:'history',l:'History',n:'309',img:'https://images.unsplash.com/photo-1461360228754-6e81c478b882?w=300&q=65'}]},
+  {id:'pln',title:'Planet Pulse',cls:'p-pln',color:'var(--yellow)',sub:'Earth Watch · Climate · Wildlife · Oceans',img:'https://images.unsplash.com/photo-1446776858070-70c3d5ed6758?w=400&q=70',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',subs:[{id:'earth',l:'Earth Watch',n:'621',img:'https://images.unsplash.com/photo-1446776858070-70c3d5ed6758?w=300&q=65'},{id:'climate',l:'Climate',n:'398',img:'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?w=300&q=65'},{id:'wildlife',l:'Wildlife',n:'512',img:'https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=300&q=65'},{id:'oceans',l:'Oceans',n:'287',img:'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=300&q=65'}]},
+];
+
+let currentUser=null,userProfile=null;
+const ADMIN_EMAIL = "etiosa.light1@gmail.com";
+let curPillar='tech',curSub='ai',curSubLabel='AI Drawing',curPillarColor='var(--purple)';
+let feedUnsub=null,pulseUnsub=null;
+let obSel=[],pfCur='all';
+let legalFrom='home';
+let dmConvos={};
+
+/* RESIZE IMAGE */
+function resizeImage(file,maxW=200,maxH=200,q=0.75){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement('canvas');
+        let w=img.width,h=img.height;
+        if(w>maxW){h=h*maxW/w;w=maxW;}
+        if(h>maxH){w=w*maxH/h;h=maxH;}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',q));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ═══ INIT — runs immediately, no waiting ═══ */
+window.addEventListener('load', function(){
+  document.getElementById('loader').style.display='none';
+  if(FIREBASE_READY && auth){
+    auth.onAuthStateChanged(async function(user){
+      if(user){
+        currentUser=user;
+        try{
+          const snap=await db.collection('users').doc(user.uid).get();
+          if(snap.exists){
+            userProfile=snap.data();
+            buildAll();
+            nav('home');
+          } else {
+            document.querySelectorAll('.ob-content').forEach(function(el){el.classList.remove('active');});
+            document.getElementById('ob1').classList.add('active');
+            obSel=[];
+            nav('onboard');
+          }
+        }catch(e){
+          nav('auth-login');
+        }
+      } else {
+        currentUser=null;
+        nav('auth-login');
+      }
+    });
+  } else {
+    userProfile={name:'Demo',handle:'@demo',email:'',pic:'',pillars:['tech','spt','cre'],posts:0,likes:0};
+    buildAll();
+    nav('home');
+  }
+});
+
+/* LOGIN */
+async function doLogin(){
+  if(!FIREBASE_READY){showToast('Add Firebase config to enable login');return;}
+  const email=document.getElementById('li-email').value.trim();
+  const pass=document.getElementById('li-pass').value;
+  const err=document.getElementById('li-err');
+  const btn=document.getElementById('li-btn');
+  if(!email||!pass){err.textContent='Please fill in all fields.';return;}
+  err.textContent='';btn.disabled=true;btn.textContent='Signing in…';
+  try{
+    await auth.signInWithEmailAndPassword(email,pass);
+  }catch(e){
+    const msgs={'auth/user-not-found':'No account found with this email.','auth/wrong-password':'Incorrect password. Please try again.','auth/invalid-email':'Please enter a valid email.','auth/too-many-requests':'Too many attempts. Please try again later.'};
+    err.textContent=msgs[e.code]||'Sign in failed. Please try again.';
+  }finally{btn.disabled=false;btn.textContent='Sign In';}
+}
+
+/* REGISTER */
+async function doRegister(){
+  if(!FIREBASE_READY){showToast('Add Firebase config to enable registration');return;}
+  const name=document.getElementById('rg-name').value.trim();
+  const handle=document.getElementById('rg-handle').value.trim();
+  const email=document.getElementById('rg-email').value.trim();
+  const pass=document.getElementById('rg-pass').value;
+  const err=document.getElementById('rg-err');
+  const btn=document.getElementById('rg-btn');
+  if(!name||!handle||!email||!pass){err.textContent='Please fill in all fields.';return;}
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';return;}
+  err.textContent='';btn.disabled=true;btn.textContent='Creating account…';
+  try{
+    const cred=await auth.createUserWithEmailAndPassword(email,pass);
+    const h=handle.startsWith('@')?handle:'@'+handle;
+    userProfile={name,handle:h,email,pic:'',pillars:[],posts:0,likes:0,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    await db.collection('users').doc(cred.user.uid).set(userProfile);
+    document.querySelectorAll('.ob-content').forEach(el=>el.classList.remove('active'));
+    document.getElementById('ob1').classList.add('active');
+    document.getElementById('ob-name').value=name;
+    obSel=[];
+    nav('onboard');
+  }catch(e){
+    const msgs={'auth/email-already-in-use':'An account with this email already exists.','auth/invalid-email':'Please enter a valid email.','auth/weak-password':'Password must be at least 6 characters.'};
+    err.textContent=msgs[e.code]||'Registration failed. Please try again.';
+  }finally{btn.disabled=false;btn.textContent='Create Account';}
+}
+
+/* LOGOUT */
+async function doLogout(){
+  if(!FIREBASE_READY||!auth){showToast('Running in demo mode');return;}
+  if(!confirm('Log out of Clover?')) return;
+  if(feedUnsub){feedUnsub();feedUnsub=null;}
+  if(pulseUnsub){pulseUnsub();pulseUnsub=null;}
+  await auth.signOut();
+}
+
+/* ONBOARDING */
+function obGo(step){
+  document.querySelectorAll('.ob-content').forEach(el=>el.classList.remove('active'));
+  if(step===2){document.getElementById('ob2').classList.add('active');}
+  else if(step===3){
+    const list=document.getElementById('ob-pill-list');list.innerHTML='';
+    PILLARS.forEach(p=>{
+      const d=document.createElement('div');d.className='ob-pill';
+      d.innerHTML=`<div class="ob-pill-ic">${p.icon}</div><div class="ob-pill-name">${p.title}</div><div class="ob-pill-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+      d.onclick=()=>{d.classList.toggle('sel');obSel=obSel.includes(p.id)?obSel.filter(x=>x!==p.id):[...obSel,p.id];};
+      list.appendChild(d);
+    });
+    document.getElementById('ob3').classList.add('active');
+  }
+}
+
+async function obFinish(){
+  if(!currentUser)return;
+  if(obSel.length<1)obSel=['tech','spt','cre'];
+  const n=document.getElementById('ob-name').value.trim();
+  const h=document.getElementById('ob-handle').value.trim();
+  if(n&&userProfile)userProfile.name=n;
+  if(h&&userProfile)userProfile.handle=h.startsWith('@')?h:'@'+h;
+  if(userProfile)userProfile.pillars=obSel;
+  try{
+    await db.collection('users').doc(currentUser.uid).update({
+      name:userProfile?.name||'Clover Pilot',
+      handle:userProfile?.handle||'@clover_pilot',
+      pillars:obSel
+    });
+  }catch(e){}
+  buildAll();
+  nav('home');
+}
+
+/* NAVIGATION */
+function nav(id){
+  const all=['auth-login','auth-register','onboard','home','detail','feed','pulse-screen','notif-screen','me-screen','settings-screen','privacy-screen','terms-screen'];
+  all.forEach(s=>{const el=document.getElementById(s);if(el)el.classList.remove('active');});
+  const el=document.getElementById(id);if(!el)return;
+  el.classList.add('active');
+  const bnav=document.getElementById('bnav');
+  bnav.style.display=['home','detail','pulse-screen','me-screen'].includes(id)?'flex':'none';
+  ['home','pulse-screen','notif-screen','me-screen'].forEach(nid=>{
+    const ni=document.getElementById('ni-'+nid);
+    if(ni)ni.classList.toggle('on',nid===id);
+  });
+}
+
+function navLegal(id){
+  legalFrom=document.querySelector('.screen.active')?.id||'home';
+  document.getElementById('privacy-back').onclick=()=>nav(legalFrom);
+  document.getElementById('terms-back').onclick=()=>nav(legalFrom);
+  nav(id);
+}
+
+function showNotifs(){nav('notif-screen');}
+function clearNotifs(){document.getElementById('notif-list').innerHTML='<div class="no-posts">All caught up!</div>';}
+function showSide(){document.getElementById('side').classList.add('show');}
+function hideSide(){document.getElementById('side').classList.remove('show');}
+
+/* BUILD ALL */
+function buildAll(){
+  if(!userProfile)return;
+  document.getElementById('home-name').textContent=(userProfile.name||'Explorer').split(' ')[0];
+  document.getElementById('prof-name').textContent=userProfile.name||'Clover Pilot';
+  document.getElementById('prof-handle').textContent=userProfile.handle||'@clover_pilot';
+  document.getElementById('side-name').textContent=userProfile.name||'Clover';
+  document.getElementById('side-handle').textContent=userProfile.handle||'@clover';
+  document.getElementById('set-name').value=userProfile.name||'';
+  document.getElementById('set-handle').value=userProfile.handle||'';
+  updateAllAvatars(userProfile.pic||'');
+  buildHomeGrid();
+  buildMeProfile();
+  loadPulse();
+  document.getElementById('h-pip').style.display='block';
+  document.getElementById('n-pip').style.display='block';
+}
+
+/* HOME */
+function buildHomeGrid(filter=''){
+  const grid=document.getElementById('home-grid');grid.innerHTML='';
+  const items=PILLARS.filter(p=>!filter||p.title.toLowerCase().includes(filter)||p.sub.toLowerCase().includes(filter));
+  document.getElementById('pillar-count').textContent=items.length+' pillar'+(items.length!==1?'s':'');
+  items.forEach((p,i)=>{
+    const d=document.createElement('div');d.className=`pc ${p.cls} fu d${Math.min(i+1,5)}`;
+    const liveS=p.subs.find(s=>s.live);
+    d.innerHTML=`<div class="pc-img" style="background-image:url('${p.img}')"></div><div class="pc-ov"></div><div class="pc-line"></div><div class="pc-top">${liveS?'<span class="badge-live">Live</span>':'<span></span>'}<span class="pc-members">${p.subs.length} topics</span></div><div class="pc-body"><div class="pc-title">${p.title}</div><div class="pc-sub">${p.sub.split(' · ').slice(0,2).join(' · ')}</div></div>`;
+    d.onclick=()=>openPillar(p.id);grid.appendChild(d);
+  });
+}
+function searchPillars(v){buildHomeGrid(v.toLowerCase());}
+
+/* DETAIL */
+function openPillar(pid){
+  curPillar=pid;
+  const p=PILLARS.find(x=>x.id===pid);
+  document.getElementById('det-title').textContent=p.title;
+  document.getElementById('det-title').style.color=p.color;
+  const grid=document.getElementById('sub-grid');grid.innerHTML='';
+  p.subs.forEach((s,i)=>{
+    const d=document.createElement('div');d.className=`sc fu d${i+1}`;
+    d.innerHTML=`<div class="sc-img" style="background-image:url('${s.img}')"></div><div class="sc-ov"></div><div class="sc-line" style="background:${p.color}"></div><div class="sc-top">${s.live?'<span class="badge-live">Live</span>':'<span></span>'}<span class="sc-cnt">${s.n}</span></div><div class="sc-body"><span class="sc-label">${s.l}</span><span class="sc-count">${s.n} members</span></div>`;
+    d.onclick=()=>openFeed(pid,s);grid.appendChild(d);
+  });
+  nav('detail');
+}
+
+/* FEED */
+const hSVG='<svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+const rSVG='<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+const mSVG='<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>';
+
+function openFeed(pid,sub){
+  curPillar=pid;curSub=sub.id;curSubLabel=sub.l;
+  const p=PILLARS.find(x=>x.id===pid);
+  curPillarColor=p.color;
+  document.getElementById('feed-bread').textContent=p.title.toUpperCase();
+  document.getElementById('feed-title').textContent=sub.l;
+  document.getElementById('feed-title').style.color=p.color;
+  document.getElementById('feed-bg').style.backgroundImage=`url('${sub.img}')`;
+  document.getElementById('feed-ov').style.background=`linear-gradient(160deg,${p.color}18 0%,rgba(0,0,0,.75) 100%)`;
+  document.getElementById('feed-bh').textContent=sub.l;
+  document.getElementById('feed-bp').textContent=p.title+' · Community';
+  document.getElementById('feed-mc').textContent=sub.n+' members';
+  document.getElementById('c-post').style.background=p.color;
+  document.getElementById('dm-send').style.background=p.color;
+  const cav=document.getElementById('c-av-el');
+  if(userProfile?.pic)cav.innerHTML=`<img src="${userProfile.pic}"/>`;
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('on'));
+  document.querySelector('.ftab').classList.add('on');
+  nav('feed');
+  listenFeed(pid,sub.id);
+}
+
+function listenFeed(pid,sid){
+  if(feedUnsub){feedUnsub();feedUnsub=null;}
+  const c=document.getElementById('feed-posts');
+  if(!FIREBASE_READY||!db){
+    c.innerHTML='';
+    const p=PILLARS.find(x=>x.id===pid);
+    renderPost('demo-1',{pillarId:pid,subId:sid,userId:'bot',userHandle:'@CloverBot',userName:'CloverBot',userPic:'',bot:true,verified:true,text:`Welcome to <strong>${curSubLabel}</strong>! Share ideas, ask questions, and connect with people who share your passion. 🍀`,likes:18,likedBy:[],createdAt:null});
+    renderPost('demo-2',{pillarId:pid,subId:sid,userId:'u2',userHandle:'@Alex_K',userName:'Alex K',userPic:'',bot:false,verified:false,text:'Just joined this community! Really excited to connect with everyone here. Who else is active? 👋',likes:7,likedBy:[],createdAt:null});
+    renderPost('demo-3',{pillarId:pid,subId:sid,userId:'u3',userHandle:'@Maria_V',userName:'Maria V',userPic:'',bot:false,verified:true,text:'Quick tip: use the reply button to respond to posts, and the message button to DM someone privately. 💬',likes:22,likedBy:[],createdAt:null});
+    return;
+  }
+  c.innerHTML='<div class="no-posts">Loading…</div>';
+  const ref=db.collection('posts').where('pillarId','==',pid).where('subId','==',sid).orderBy('createdAt','asc').limit(50);
+  feedUnsub=ref.onSnapshot(async snap=>{
+    if(snap.empty){
+      await db.collection('posts').add({pillarId:pid,subId:sid,userId:'bot',userHandle:'@CloverBot',userName:'CloverBot',userPic:'',bot:true,verified:true,text:`Welcome to <strong>${curSubLabel}</strong>! Share ideas, ask questions, and connect with people who share your passion. 🍀`,likes:0,likedBy:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      return;
+    }
+    c.innerHTML='';
+    snap.forEach(doc=>renderPost(doc.id,doc.data()));
+  },err=>{
+    if(err.code==='failed-precondition')c.innerHTML='<div class="no-posts">Set up Firestore index in Firebase Console → Firestore → Indexes.<br><br>Add: posts | pillarId ASC, subId ASC, createdAt ASC</div>';
+    else c.innerHTML='<div class="no-posts">Could not load posts. Check your Firebase config.</div>';
+  });
+}
+
+function renderPost(docId,post){
+  if(document.getElementById('post-'+docId))return;
+  const c=document.getElementById('feed-posts');
+  const d=document.createElement('div');d.className='post';d.id='post-'+docId;
+  const botSVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;stroke:var(--cyan)"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M12 3v4m-3 0h6"/><circle cx="9" cy="15" r="1" fill="currentColor"/><circle cx="15" cy="15" r="1" fill="currentColor"/><path d="M9 19h6"/></svg>';
+  const userSVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:20px;height:20px;stroke:var(--muted)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  const avHtml=post.userPic?`<img src="${post.userPic}"/>`:(post.bot?botSVG:userSVG);
+  const liked=post.likedBy?.includes(currentUser?.uid);
+  d.innerHTML=`
+    <div class="post-hdr">
+      <div class="post-av${post.bot?' bot':''}">${avHtml}</div>
+      <div style="flex:1">
+        <div class="post-name">${post.userHandle||post.userName}${post.verified?`<span class="post-vbadge" style="background:${post.bot?'var(--cyan)':curPillarColor}">✓</span>`:''}</div>
+        <div class="post-time">${timeAgo(post.createdAt?.toDate?.()||new Date())}</div>
+      </div>
+<div class="post-menu" onclick="showPostMenu('${docId}','${post.userId}')">···</div>
+    </div>
+    <div class="post-body">${post.text}</div>
+    <div class="post-footer">
+      <div class="pa${liked?' liked':''}" id="like-${docId}" onclick="likePost('${docId}')"><span class="pa-icon">${hSVG}</span><span id="lc-${docId}">${post.likes||0}</span></div>
+      <div class="pa" onclick="replyPost('${docId}')"><span class="pa-icon">${rSVG}</span>Reply</div>
+      ${!post.bot?`<div class="pa" onclick="openDM('${post.userHandle||post.userName}','${post.userPic||''}','${curPillarColor}')"><span class="pa-icon">${mSVG}</span>Message</div>`:''}
+    </div>
+    <div class="reply-wrap" id="rw-${docId}">
+      <textarea class="r-in" placeholder="Write a reply…" rows="1" id="ri-${docId}"></textarea>
+      <button class="r-btn" style="background:${curPillarColor}" onclick="sendReply('${docId}')">Send</button>
+    </div>`;
+  c.appendChild(d);
+}
+
+async function likePost(docId){
+  if(!FIREBASE_READY||!db||!currentUser){
+    const el=document.getElementById('like-'+docId);
+    if(el)el.classList.toggle('liked');
+    return;
+  }
+  const ref=db.collection('posts').doc(docId);
+  const snap=await ref.get();if(!snap.exists)return;
+  const data=snap.data();
+  const liked=data.likedBy?.includes(currentUser.uid);
+  ref.update({likes:firebase.firestore.FieldValue.increment(liked?-1:1),likedBy:liked?firebase.firestore.FieldValue.arrayRemove(currentUser.uid):firebase.firestore.FieldValue.arrayUnion(currentUser.uid)});
+  const el=document.getElementById('like-'+docId);
+  const lc=document.getElementById('lc-'+docId);
+  if(el)el.classList.toggle('liked',!liked);
+  if(lc)lc.textContent=(data.likes||0)+(liked?-1:1);
+}
+
+function replyPost(docId){
+  const rw=document.getElementById('rw-'+docId);if(!rw)return;
+  const open=rw.classList.contains('show');
+  document.querySelectorAll('.reply-wrap').forEach(r=>r.classList.remove('show'));
+  if(!open){rw.classList.add('show');rw.querySelector('textarea').focus();}
+}
+
+async function sendReply(docId){
+  const inp=document.getElementById('ri-'+docId);
+  const txt=inp.value.trim();if(!txt||!currentUser||!userProfile)return;
+  await db.collection('posts').add({pillarId:curPillar,subId:curSub,userId:currentUser.uid,userHandle:userProfile.handle,userName:userProfile.name,userPic:userProfile.pic||'',bot:false,verified:false,text:'↩ '+txt,likes:0,likedBy:[],replyTo:docId,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  inp.value='';document.getElementById('rw-'+docId).classList.remove('show');
+}
+
+async function doCompose(){
+  const txt=prompt(`Post in ${curSubLabel}:`);
+  if(!txt?.trim())return;
+  if(!FIREBASE_READY||!db||!currentUser||!userProfile){
+    renderPost('local-'+Date.now(),{pillarId:curPillar,subId:curSub,userId:'local',userHandle:userProfile?.handle||'@you',userName:userProfile?.name||'You',userPic:userProfile?.pic||'',bot:false,verified:false,text:txt.trim(),likes:0,likedBy:[],createdAt:null});
+    return;
+  }
+  await db.collection('posts').add({pillarId:curPillar,subId:curSub,userId:currentUser.uid,userHandle:userProfile.handle,userName:userProfile.name,userPic:userProfile.pic||'',bot:false,verified:false,text:txt.trim(),likes:0,likedBy:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  db.collection('users').doc(currentUser.uid).update({posts:firebase.firestore.FieldValue.increment(1)});
+}
+
+function tab(el,t){
+  document.querySelectorAll('.ftab').forEach(x=>x.classList.remove('on'));el.classList.add('on');
+  const c=document.getElementById('feed-posts');
+  if(t==='posts')listenFeed(curPillar,curSub);
+  else if(t==='members')c.innerHTML='<div class="no-posts">Members directory coming soon.</div>';
+  else c.innerHTML='<div class="no-posts">No media posted yet.</div>';
+}
+
+/* DM */
+function openDM(username,pic,color){
+  document.getElementById('dm-uname').textContent=username;
+  const av=document.getElementById('dm-av');
+  if(pic){av.innerHTML=`<img src="${pic}"/>`;av.style.fontSize='';}
+  else{av.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:20px;height:20px;stroke:var(--muted)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}
+  document.getElementById('dm-send').style.background=color;
+  if(!dmConvos[username])dmConvos[username]=[{mine:false,text:'Hey! 👋 Happy to connect here!',time:new Date()}];
+  renderDM(username,pic);
+  document.getElementById('dm').classList.add('show');
+}
+function closeDM(){document.getElementById('dm').classList.remove('show');}
+
+function renderDM(username,pic){
+  const c=document.getElementById('dm-msgs');c.innerHTML='';
+  const color=document.getElementById('dm-send').style.background;
+  const uSVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;stroke:var(--muted)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  (dmConvos[username]||[]).forEach(msg=>{
+    const d=document.createElement('div');d.className='dm-msg'+(msg.mine?' mine':'');
+    const myAv=userProfile?.pic?`<img src="${userProfile.pic}"/>`:uSVG;
+    const theirAv=pic?`<img src="${pic}"/>`:uSVG;
+    const bs=msg.mine?`style="background:${color};"`:'';
+    d.innerHTML=`${!msg.mine?`<div class="dm-msg-av">${theirAv}</div>`:''}<div><div class="dm-bubble" ${bs}>${msg.text}</div><div class="dm-t">${timeAgo(msg.time)}</div></div>${msg.mine?`<div class="dm-msg-av">${myAv}</div>`:''}`;
+    c.appendChild(d);
+  });
+  c.scrollTop=c.scrollHeight;
+}
+
+function sendDM(){
+  const inp=document.getElementById('dm-in');
+  const txt=inp.value.trim();if(!txt)return;
+  const uname=document.getElementById('dm-uname').textContent;
+  const pic=document.getElementById('dm-av').querySelector('img')?.src||'';
+  if(!dmConvos[uname])dmConvos[uname]=[];
+  dmConvos[uname].push({mine:true,text:txt,time:new Date()});
+  inp.value='';renderDM(uname,pic);
+  setTimeout(()=>{
+    const r=["Got it! Thanks 🙌","Interesting! Tell me more 👀","Love the energy 🔥","Let's connect!","Great point! 💯"];
+    dmConvos[uname].push({mine:false,text:r[Math.floor(Math.random()*r.length)],time:new Date()});
+    renderDM(uname,pic);
+  },900);
+}
+function dmKey(e){if(e.key==='Enter'&&!e.shiftkey){e.preventDefault();sendDM();}} 
+/* PULSE */
+function loadPulse(){
+  const list=document.getElementById('pulse-list');
+  if(!FIREBASE_READY||!db){
+    list.innerHTML='<div class="no-posts">Connect Firebase to see live activity.</div>';
+    document.getElementById('pulse-count').textContent='Demo mode';
+    return;
+  }
+  list.innerHTML='<div class="no-posts">Loading activity…</div>';
+  if(pulseUnsub)pulseUnsub();
+  pulseUnsub=db.collection('posts').orderBy('createdAt','desc').limit(30).onSnapshot(snap=>{
+    list.innerHTML='';let count=0;
+    snap.forEach(doc=>{
+      const post=doc.data();if(post.bot)return;
+      const p=PILLARS.find(x=>x.id===post.pillarId);if(!p)return;
+      const sub=p.subs.find(s=>s.id===post.subId);
+      count++;
+      const d=document.createElement('div');d.className='pi fu';
+      d.innerHTML=`<div class="pi-thumb" style="background-image:url('${sub?.img||p.img}')"></div><div class="pi-body"><div class="pi-meta"><div class="pi-dot" style="background:${p.color}"></div><span class="pi-user">${post.userHandle||post.userName}</span></div><div class="pi-text">Posted in ${p.title} · ${sub?.l||''}</div><div class="pi-time">${timeAgo(post.createdAt?.toDate?.()||new Date())}</div></div>`;
+      list.appendChild(d);
+    });
+    document.getElementById('pulse-count').textContent=count+' active';
+    if(count===0)list.innerHTML='<div class="no-posts">No activity yet — be the first to post!</div>';
+  },()=>{list.innerHTML='<div class="no-posts">Could not load pulse.</div>';});
+}
+function pulseFilter(el,cat){document.querySelectorAll('.pf').forEach(f=>f.classList.remove('on'));el.classList.add('on');pfCur=cat;loadPulse();}
+
+/* PROFILE */
+function buildMeProfile(){
+  if(!userProfile)return;
+  const sel=userProfile.pillars?.length?PILLARS.filter(p=>userProfile.pillars.includes(p.id)):PILLARS.slice(0,4);
+  document.getElementById('ps-pillars').textContent=sel.length;
+  document.getElementById('ps-posts').textContent=userProfile.posts||0;
+  document.getElementById('ps-likes').textContent=userProfile.likes||0;
+  const grid=document.getElementById('prof-pillar-grid');grid.innerHTML='';
+  sel.forEach(p=>{
+    const d=document.createElement('div');d.className='mp';
+    d.innerHTML=`<div class="mp-dot" style="background:${p.color}"></div><div><div class="mp-n">${p.title}</div><div class="mp-p">${p.subs.length} topics</div></div>`;
+    grid.appendChild(d);
+  });
+}
+
+function updateAllAvatars(pic){
+  ['prof-av-el','c-av-el','side-av-el'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(pic)el.innerHTML=`<img src="${pic}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    else el.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  });
+  const pp=document.getElementById('pic-preview');
+  if(pp){if(pic)pp.innerHTML=`<img src="${pic}"/>`;else pp.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';}
+}
+
+async function handlePic(e){
+  const file=e.target.files[0];if(!file||!currentUser)return;
+  showToast('Processing photo…');
+  const resized=await resizeImage(file,200,200,0.75);
+  if(userProfile)userProfile.pic=resized;
+  try{await db.collection('users').doc(currentUser.uid).update({pic:resized});}catch(e){}
+  updateAllAvatars(resized);
+  showToast('Profile photo updated ✓');
+  e.target.value='';
+}
+
+/* SETTINGS */
+async function liveUpdateName(v){
+  if(!v.trim()||!currentUser)return;
+  if(userProfile)userProfile.name=v.trim();
+  document.getElementById('prof-name').textContent=v.trim();
+  document.getElementById('home-name').textContent=v.trim().split(' ')[0];
+  document.getElementById('side-name').textContent=v.trim();
+  try{await db.collection('users').doc(currentUser.uid).update({name:v.trim()});}catch(e){}
+}
+function setTheme(color,el){
+  document.documentElement.style.setProperty('--bg',color);
+  document.querySelectorAll('.sw').forEach(s=>s.classList.remove('on'));el.classList.add('on');
+}
+function tog(el){el.classList.toggle('on');}
+
+/* UTILS */
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function timeAgo(date){
+  if(!date)return 'Just now';
+  const s=Math.floor((Date.now()-date.getTime())/1000);
+  if(s<10)return 'Just now';if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';
+}
+
+/* TICKER */
+const ticks=['<strong>Sports Arena</strong> · Football — 2 live matches now','<strong>Tech Hub</strong> · Crypto — Bitcoin up 3.2% today','<strong>Planet Pulse</strong> · Climate — New report trending','<strong>Social Sphere</strong> · Global News trending','<strong>Sciences</strong> · Space — Webb telescope update'];
+let tickIdx=0;
+function rotateTicker(){tickIdx=(tickIdx+1)%ticks.length;const el=document.getElementById('ticker-text');if(el)el.innerHTML=ticks[tickIdx];}
+setInterval(rotateTicker,4000);
+function showPostMenu(docId, postUserId){
+  const isAdmin = currentUser?.email === ADMIN_EMAIL;
+  const isOwner = currentUser?.uid === postUserId;
+  const options = [];
+  if(isAdmin || isOwner){
+    options.push({label:'🗑️ Delete post', action:()=>deletePost(docId)});
+  }
+  options.push({label:'🚩 Report post', action:()=>reportPost(docId)});
+  const sheet = document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.5)';
+  const menu = document.createElement('div');
+  menu.style.cssText='background:#1a1a22;border-radius:20px 20px 0 0;padding:16px;display:flex;flex-direction:column;gap:8px;';
+  options.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='padding:16px;border:none;background:#2a2a35;color:#f0f0f8;border-radius:12px;font-size:15px;font-family:Space Grotesk,sans-serif;cursor:pointer;text-align:left;';
+    btn.textContent=opt.label;
+    btn.onclick=()=>{document.body.removeChild(sheet);opt.action();};
+    menu.appendChild(btn);
+  });
+  const cancel=document.createElement('button');
+  cancel.style.cssText='padding:16px;border:none;background:#2a2a35;color:#f04060;border-radius:12px;font-size:15px;font-family:Space Grotesk,sans-serif;cursor:pointer;margin-top:4px;';
+  cancel.textContent='Cancel';
+  cancel.onclick=()=>document.body.removeChild(sheet);
+  menu.appendChild(cancel);
+  sheet.appendChild(menu);
+  sheet.onclick=(e)=>{if(e.target===sheet)document.body.removeChild(sheet);};
+  document.body.appendChild(sheet);
+}
+
+async function deletePost(docId){
+  if(!db||!currentUser)return;
+  try{
+    await db.collection('posts').doc(docId).delete();
+    const el=document.getElementById('post-'+docId);
+    if(el)el.remove();
+    showToast('Post deleted');
+  }catch(e){showToast('Could not delete post');}
+}
+
+async function reportPost(docId){
+  if(!db||!currentUser)return;
+  try{
+    await db.collection('reports').add({
+      postId:docId,
+      reportedBy:currentUser.uid,
+      reportedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      pillarId:curPillar,
+      subId:curSub
+    });
+    showToast('Post reported — we will review it 🚩');
+  }catch(e){showToast('Could not report post');}
+}
+</script>
+</body>
+</html>
